@@ -10,21 +10,15 @@ import com.beijunyi.xbsa.model.raw.data.Spr;
 import com.beijunyi.xbsa.model.raw.index.Adrn;
 import com.beijunyi.xbsa.model.raw.index.SprAdrn;
 import com.beijunyi.xbsa.utils.bitwise.BitwiseUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class RawModelUtils {
-
-  private static final Logger log = LoggerFactory.getLogger(RawModelUtils.class);
 
   private static final String LS2MAP = "LS2MAP";
   private static final String READ_ONLY_ACCESS = "r";
   private static final String GBK = "gbk";
 
   public static Spr deserializeSpr(File file, long pos) throws IOException {
-    log.debug("Start deserializing Spr from {} pos {}", file, pos);
-    try(RandomAccessFile access = new RandomAccessFile(file, READ_ONLY_ACCESS)) {
+    try (RandomAccessFile access = new RandomAccessFile(file, READ_ONLY_ACCESS)) {
       Spr ret = new Spr();
       access.seek(pos);
 
@@ -58,14 +52,12 @@ public class RawModelUtils {
       }
       ret.setFrames(frames);
 
-      log.debug("Deserializing Spr from {} completed", file);
       return ret;
     }
   }
 
   public static Real deserializeReal(File file, long pos) throws IOException {
-    log.debug("Start deserializing Real from {} pos {}", file, pos);
-    try(RandomAccessFile access = new RandomAccessFile(file, READ_ONLY_ACCESS)) {
+    try (RandomAccessFile access = new RandomAccessFile(file, READ_ONLY_ACCESS)) {
       Real ret = new Real();
       access.seek(pos);
 
@@ -99,14 +91,12 @@ public class RawModelUtils {
       access.read(dataBytes);
       ret.setData(dataBytes);
 
-      log.debug("Deserializing Real from {} completed", file);
       return ret;
     }
   }
 
   public static Collection<SprAdrn> deserializeSprAdrn(File file) throws IOException {
-    log.debug("Start deserializing SprAdrn from {}", file);
-    try(InputStream in = new FileInputStream(file)) {
+    try (InputStream in = new FileInputStream(file)) {
       Collection<SprAdrn> ret = new ArrayList<>();
 
       while(in.available() > 0) {
@@ -131,14 +121,12 @@ public class RawModelUtils {
         ret.add(sprAdrn);
       }
 
-      log.debug("Deserializing SprAdrn from {} completed", file);
       return ret;
     }
   }
 
   public static Collection<Adrn> deserializeAdrn(File file) throws IOException {
-    log.debug("Start deserializing Adrn from {}", file);
-    try(InputStream in = new FileInputStream(file)) {
+    try (InputStream in = new FileInputStream(file)) {
       Collection<Adrn> ret = new ArrayList<>();
       while(in.available() > 0) {
         Adrn adrn = new Adrn();
@@ -193,22 +181,17 @@ public class RawModelUtils {
 
         ret.add(adrn);
       }
-      log.debug("Deserializing Adrn from {} completed", file);
       return ret;
     }
   }
 
-  public static Ls2Map deserializeLs2Map(File file) throws IOException {
-    log.debug("Start deserializing Ls2Map from {}", file);
-    try(InputStream in = new FileInputStream(file)) {
+  public static Ls2Map deserializeLs2Map(File file, boolean skipContent) throws IOException {
+    try (InputStream in = new FileInputStream(file)) {
       Ls2Map ret = new Ls2Map();
       byte[] versionBytes = new byte[6];
       in.read(versionBytes);
       String version = new String(versionBytes);
       if(!version.equals(LS2MAP)) {
-        if(StringUtils.isAsciiPrintable(version)) {
-          log.error("Unrecognized map version {} in {}", version, file);
-        }
         return null;
       }
       ret.setVersion(version);
@@ -237,24 +220,25 @@ public class RawModelUtils {
       int south = BitwiseUtils.uint16BE(southBytes);
       ret.setSouth(south);
 
-      int max = east * south;
-      int[] tiles = new int[max];
-      for(int i = 0; i < max; i++) {
-        byte[] tileBytes = new byte[2];
-        in.read(tileBytes);
-        tiles[i] = BitwiseUtils.uint16BE(tileBytes);
-      }
-      ret.setTiles(tiles);
+      if(!skipContent) {
+        int max = east * south;
+        int[] tiles = new int[max];
+        for(int i = 0; i < max; i++) {
+          byte[] tileBytes = new byte[2];
+          in.read(tileBytes);
+          tiles[i] = BitwiseUtils.uint16BE(tileBytes);
+        }
+        ret.setTiles(tiles);
 
-      int[] objects = new int[max];
-      for(int i = 0; i < max; i++) {
-        byte[] objectBytes = new byte[2];
-        in.read(objectBytes);
-        objects[i] = BitwiseUtils.uint16BE(objectBytes);
+        int[] objects = new int[max];
+        for(int i = 0; i < max; i++) {
+          byte[] objectBytes = new byte[2];
+          in.read(objectBytes);
+          objects[i] = BitwiseUtils.uint16BE(objectBytes);
+        }
+        ret.setObjects(objects);
       }
-      ret.setObjects(objects);
 
-      log.debug("Deserializing Ls2Map from {} completed", file);
       return ret;
     }
   }
